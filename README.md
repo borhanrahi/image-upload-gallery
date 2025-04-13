@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Modern Image Gallery
+
+A beautiful and responsive image gallery built with Next.js, TypeScript, and Material UI. This application allows users to upload images to Cloudinary, view them in a responsive grid, open image previews, and delete images.
+
+## Features
+
+- Responsive image gallery with grid layout
+- Upload single/multiple images with drag-and-drop functionality
+- Cloudinary integration for image storage
+- Image preview modal for larger view
+- Delete functionality with confirmation dialog
+- Infinite scroll for image loading
+- Search functionality to filter images by title or tags
+- Beautiful and modern UI with Material UI
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18.x or higher
+- npm or yarn
+
+### Installation
+
+1. Clone the repository
+```bash
+git clone https://github.com/yourusername/image-gallery.git
+cd image-gallery
+```
+
+2. Install the dependencies
+```bash
+npm install
+# or
+yarn install
+```
+
+3. Configure Cloudinary
+
+Update the `.env` file with your Cloudinary credentials:
+```
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+You need to:
+- Create a Cloudinary account at [cloudinary.com](https://cloudinary.com/)
+- Get your Cloud Name from the Cloudinary dashboard
+- Create an unsigned upload preset in the Settings > Upload section
+- Add your API Key and API Secret from the dashboard
+
+### Running the development server
 
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+/app
+├── /api           # API routes
+│   └── /delete-image  # Image deletion API
+├── /components    # React components
+├── /hooks         # Custom React hooks
+├── /types         # TypeScript type definitions
+├── /utils         # Utility functions and configurations
+├── layout.tsx     # Root layout component
+└── page.tsx       # Home page component
+```
 
-## Learn More
+## Technologies Used
 
-To learn more about Next.js, take a look at the following resources:
+- [Next.js](https://nextjs.org/) - React framework
+- [TypeScript](https://www.typescriptlang.org/) - Type safety
+- [Material UI](https://mui.com/) - UI components
+- [Cloudinary](https://cloudinary.com/) - Image storage and manipulation
+- [Axios](https://axios-http.com/) - HTTP client
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is licensed under the MIT License
+# image-upload-gallery
