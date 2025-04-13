@@ -23,7 +23,6 @@ export const useImageUpload = (): UseImageUploadReturn => {
       setError(null);
       setUploadProgress(0);
 
-      // Simulate upload progress (in a real app, you'd use actual progress events)
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           const newProgress = prev + Math.random() * 10;
@@ -49,8 +48,6 @@ export const useImageUpload = (): UseImageUploadReturn => {
   const uploadMultipleImages = async (files: File[]): Promise<ImageType[]> => {
     const images: ImageType[] = [];
     
-    // Simple implementation that uploads sequentially
-    // In a real app, you might want to use Promise.all with a limit
     for (const file of files) {
       const image = await uploadImage(file);
       if (image) {

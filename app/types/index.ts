@@ -4,7 +4,8 @@ export interface ImageType {
   title: string;
   tags?: string[];
   createdAt: string;
-  publicId: string; // Cloudinary public ID for deletion
+  date?: string;
+  publicId: string; 
   width: number;
   height: number;
 }

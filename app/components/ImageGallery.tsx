@@ -1,152 +1,349 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
-  CircularProgress, 
   Alert, 
-  Container, 
-  useTheme
+  Snackbar,
+  Pagination,
+  Container,
+  useMediaQuery,
+  Theme,
+  CircularProgress,
+  Paper,
+  Fade,
+  Zoom
 } from '@mui/material';
-import { useImageGallery } from '../hooks/useImageGallery';
 import ImageCard from './ImageCard';
 import ImagePreview from './ImagePreview';
 import { ImageType } from '../types';
+import { useImageGallery } from '../hooks/useImageGallery';
 
-interface ImageGalleryProps {
-  initialImages?: ImageType[];
+export interface ImageGalleryProps {
+  initialImages: ImageType[];
   searchTerm: string;
   onAddImages: (images: ImageType[]) => void;
+  onImageDeleted: (id: string) => void;
 }
 
-const ImageGallery = ({ initialImages = [], searchTerm, onAddImages }: ImageGalleryProps) => {
-  const {
-    images,
-    loading,
-    error,
-    selectedImage,
-    filteredImages,
-    hasMore,
-    loadMore,
-    deleteImage,
-    selectImage,
-    setSearchTerm,
-  } = useImageGallery({ initialImages });
+const IMAGES_PER_PAGE = 8; // 4 columns x 2 rows
+
+export default function ImageGallery({ 
+  initialImages, 
+  searchTerm, 
+  onAddImages,
+  onImageDeleted
+}: ImageGalleryProps) {
+  const { images, loading, error, deleteImage } = useImageGallery({
+    initialImages
+  });
   
+  const [filteredImages, setFilteredImages] = useState<ImageType[]>([]);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const theme = useTheme();
-  const observer = useRef<IntersectionObserver | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [paginatedImages, setPaginatedImages] = useState<ImageType[]>([]);
+  const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
   
-  // Set up the search term from props
+  const isSmallScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+  const isMediumScreen = useMediaQuery((theme: Theme) => theme.breakpoints.between('sm', 'md'));
+  
   useEffect(() => {
-    setSearchTerm(searchTerm);
-  }, [searchTerm, setSearchTerm]);
-  
-  // Set up the intersection observer for infinite scroll
-  const lastImageElementRef = useCallback((node: HTMLDivElement | null) => {
-    if (loading) return;
+    if (!images) return;
     
-    if (observer.current) {
-      observer.current.disconnect();
-    }
+    const filtered = searchTerm
+      ? images.filter(img => 
+          img.title.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : images;
     
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        loadMore();
-      }
-    });
-    
-    if (node) {
-      observer.current.observe(node);
-    }
-  }, [loading, hasMore, loadMore]);
+    setFilteredImages(filtered);
+    setTotalPages(Math.ceil(filtered.length / IMAGES_PER_PAGE));
+    setCurrentPage(1); 
+  }, [images, searchTerm]);
   
-  const handlePreviewOpen = (image: ImageType) => {
-    selectImage(image);
-  };
-  
-  const handlePreviewClose = () => {
-    selectImage(null);
-  };
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * IMAGES_PER_PAGE;
+    setPaginatedImages(filteredImages.slice(startIndex, startIndex + IMAGES_PER_PAGE));
+  }, [filteredImages, currentPage]);
   
   const handleDeleteImage = async (id: string) => {
+    console.log('Starting image deletion for ID:', id);
+    setDeleteError(null);
+    
     try {
-      setDeleteError(null);
-      console.log('Starting deletion process for image with ID:', id);
-      
-      // Attempt to delete the image
       const success = await deleteImage(id);
       
       if (success) {
-        console.log('Image successfully removed from UI');
-        // In the simplified approach, we're always returning true from deleteImage
-        // Notify parent to update localStorage
-        onAddImages([]);
+        console.log('Image deleted successfully, notifying parent component');
+        onImageDeleted(id);
       } else {
-        setDeleteError('Failed to delete image. Please try again.');
+        console.error('Failed to delete image');
+        setDeleteError('Failed to delete image');
       }
-    } catch (err) {
-      console.error('Error in image deletion process:', err);
-      setDeleteError('An error occurred during deletion. Please try again.');
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      setDeleteError('Error deleting image');
     }
   };
   
+  const handlePageChange = (_event: React.ChangeEvent<unknown>, page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Smooth scroll to top
+  };
+
+  const getGridColumns = () => {
+    if (isSmallScreen) return 'repeat(1, 1fr)';
+    if (isMediumScreen) return 'repeat(2, 1fr)';
+    return 'repeat(4, 1fr)';
+  };
+  
+  const handlePreviewOpen = (image: ImageType) => {
+    setSelectedImage(image);
+  };
+  
+  const handlePreviewClose = () => {
+    setSelectedImage(null);
+  };
+
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert 
+          severity="error" 
+          variant="filled" 
+          sx={{ 
+            mb: 3, 
+            borderRadius: 2,
+            boxShadow: '0 4px 20px rgba(211, 47, 47, 0.15)'
+          }}
+        >
           {error}
         </Alert>
       )}
       
       {deleteError && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setDeleteError(null)}>
-          {deleteError}
-        </Alert>
+        <Snackbar 
+          open={!!deleteError} 
+          autoHideDuration={6000} 
+          onClose={() => setDeleteError(null)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          TransitionComponent={Fade}
+        >
+          <Alert 
+            severity="error" 
+            variant="filled" 
+            sx={{ 
+              boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+              borderRadius: 2
+            }}
+          >
+            {deleteError}
+          </Alert>
+        </Snackbar>
       )}
       
-      {filteredImages.length === 0 && !loading ? (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h5" gutterBottom>
-            No images found
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            {searchTerm 
-              ? 'Try a different search term or upload some images' 
-              : 'Get started by uploading some images'}
-          </Typography>
-        </Box>
-      ) : (
+      {loading ? (
         <Box sx={{ 
-          display: 'grid', 
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: 'repeat(2, 1fr)',
-            md: 'repeat(3, 1fr)',
-            lg: 'repeat(4, 1fr)'
-          },
-          gap: 2 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          p: 10,
+          flexDirection: 'column',
+          gap: 2
         }}>
-          {filteredImages.map((image, index) => {
-            const isLastElement = index === filteredImages.length - 1;
-            
-            return (
-              <Box key={image.id} ref={isLastElement ? lastImageElementRef : undefined}>
-                <ImageCard
-                  image={image}
-                  onOpenPreview={handlePreviewOpen}
-                  onDelete={handleDeleteImage}
-                />
-              </Box>
-            );
-          })}
+          <CircularProgress size={60} thickness={4} sx={{ color: '#FF5370' }} />
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              color: 'text.secondary',
+              fontWeight: 500,
+              animation: 'pulse 1.5s infinite ease-in-out',
+              '@keyframes pulse': {
+                '0%': { opacity: 0.6 },
+                '50%': { opacity: 1 },
+                '100%': { opacity: 0.6 }
+              }
+            }}
+          >
+            Loading gallery...
+          </Typography>
         </Box>
-      )}
-      
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <CircularProgress />
+      ) : filteredImages.length === 0 ? (
+        <Paper elevation={0} 
+          sx={{ 
+            textAlign: 'center', 
+            p: 8, 
+            borderRadius: 2,
+            background: 'linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
+            border: '1px solid rgba(0,0,0,0.05)'
+          }}
+        >
+          <Zoom in={true} style={{ transitionDelay: '150ms' }}>
+            <Box>
+              <Box 
+                component="img" 
+                src="/empty-gallery.svg" 
+                alt="No images" 
+                sx={{ 
+                  width: '180px', 
+                  height: 'auto', 
+                  mb: 3,
+                  opacity: 0.7,
+                  filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
+                }} 
+              />
+              <Typography 
+                variant="h5" 
+                component="h2" 
+                sx={{ 
+                  fontWeight: 700,
+                  mb: 1,
+                  background: 'linear-gradient(90deg, #FF5370, #ff8787)',
+                  backgroundClip: 'text',
+                  textFillColor: 'transparent',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}
+              >
+                {searchTerm ? 'No images matching your search' : 'Your gallery is empty'}
+              </Typography>
+              <Typography variant="body1" sx={{ mt: 1, maxWidth: '500px', mx: 'auto', color: 'text.secondary' }}>
+                {searchTerm 
+                  ? 'Try a different search term or clear your search to see all images'
+                  : 'Upload some beautiful images to start building your collection'
+                }
+              </Typography>
+            </Box>
+          </Zoom>
+        </Paper>
+      ) : (
+        <Box sx={{ my: 2 }}>
+          {/* Gallery Header */}
+          <Box 
+            sx={{ 
+              mb: 3, 
+              display: 'flex', 
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 2,
+              px: 1
+            }}
+          >
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{
+                color: '#1E1E2F',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <Box
+                component="span"
+                sx={{
+                  width: 8,
+                  height: 24,
+                  bgcolor: '#FF5370',
+                  display: 'inline-block',
+                  mr: 2,
+                  borderRadius: 1,
+                }}
+              />
+              {searchTerm ? 'Search Results' : 'Gallery Items'}
+              <Box
+                component="span"
+                sx={{
+                  ml: 2,
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: '12px',
+                  fontSize: '0.8rem',
+                  backgroundColor: 'rgba(30, 30, 47, 0.05)',
+                  fontWeight: 700,
+                }}
+              >
+                {filteredImages.length}
+              </Box>
+            </Typography>
+          </Box>
+          
+
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: getGridColumns(),
+            gap: 3,
+            py: 1
+          }}>
+            {paginatedImages.map((image, index) => (
+              <Zoom 
+                in={true} 
+                style={{ 
+                  transitionDelay: `${index * 50}ms`,
+                  transitionDuration: '350ms'
+                }}
+                key={image.id}
+              >
+                <Box sx={{ 
+                  transform: 'perspective(1000px)',
+                  transformStyle: 'preserve-3d',
+                  height: '100%'
+                }}>
+                  <ImageCard
+                    image={image}
+                    onOpenPreview={handlePreviewOpen}
+                    onDelete={handleDeleteImage}
+                  />
+                </Box>
+              </Zoom>
+            ))}
+          </Box>
+          
+          {totalPages > 1 && (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              mt: 5,
+              pt: 3,
+              borderTop: '1px solid rgba(0,0,0,0.06)'
+            }}>
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={handlePageChange}
+                color="primary"
+                size={isSmallScreen ? "medium" : "large"}
+                showFirstButton
+                showLastButton
+                sx={{
+                  '& .MuiPaginationItem-root': {
+                    borderRadius: 2,
+                    mx: 0.5,
+                    transition: 'all 0.3s ease',
+                    fontWeight: 500,
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 83, 112, 0.1)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 3px 10px rgba(0,0,0,0.05)',
+                    },
+                  },
+                  '& .Mui-selected': {
+                    backgroundColor: '#FF5370 !important',
+                    color: 'white',
+                    boxShadow: '0 4px 15px rgba(255, 83, 112, 0.3)',
+                    '&:hover': {
+                      backgroundColor: '#ff4060 !important',
+                      boxShadow: '0 6px 15px rgba(255, 83, 112, 0.4)',
+                    }
+                  }
+                }}
+              />
+            </Box>
+          )}
         </Box>
       )}
       
@@ -154,10 +351,8 @@ const ImageGallery = ({ initialImages = [], searchTerm, onAddImages }: ImageGall
         open={!!selectedImage} 
         onClose={handlePreviewClose}
         image={selectedImage}
-        images={images}
+        images={filteredImages}
       />
     </Container>
   );
-};
-
-export default ImageGallery; 
+} 

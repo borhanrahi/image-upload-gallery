@@ -1,7 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { NextResponse } from 'next/server';
 
-// Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -19,7 +18,6 @@ export async function DELETE(request: Request) {
     
     console.log('DELETE API: Attempting to delete image with publicId:', publicId);
     
-    // Check if the publicId is one of our demo images
     if (publicId.startsWith('demo/') || publicId === 'sample' || publicId.includes('cld-sample')) {
       console.log('DELETE API: Demo image detected, simulating successful deletion');
       return NextResponse.json({ success: true });
@@ -30,8 +28,7 @@ export async function DELETE(request: Request) {
       const result = await cloudinary.uploader.destroy(publicId);
       console.log('DELETE API: Cloudinary response:', result);
       
-      // Consider both 'ok' result and 'not found' as success cases
-      // If the image is already gone, that's still a success for our purposes
+
       if (result.result === 'ok' || result.result === 'not found') {
         return NextResponse.json({ success: true });
       } else {

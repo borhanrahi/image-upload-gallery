@@ -24,7 +24,6 @@ interface UseImageGalleryReturn {
   setSearchTerm: (term: string) => void;
 }
 
-// Number of images to display per "page" in infinite scroll
 const IMAGES_PER_PAGE = 12;
 
 export const useImageGallery = ({ initialImages = [] }: UseImageGalleryProps = {}): UseImageGalleryReturn => {
@@ -35,12 +34,10 @@ export const useImageGallery = ({ initialImages = [] }: UseImageGalleryProps = {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Update images when initialImages prop changes
   useEffect(() => {
     setImages(initialImages);
   }, [initialImages]);
 
-  // Filter images based on search term
   const filteredImages = useCallback(() => {
     if (!searchTerm.trim()) {
       return images;
@@ -48,12 +45,10 @@ export const useImageGallery = ({ initialImages = [] }: UseImageGalleryProps = {
     
     const term = searchTerm.toLowerCase().trim();
     return images.filter(image => {
-      // Search by title
       if (image.title.toLowerCase().includes(term)) {
         return true;
       }
       
-      // Search by tags if available
       if (image.tags?.some(tag => tag.toLowerCase().includes(term))) {
         return true;
       }
@@ -62,20 +57,17 @@ export const useImageGallery = ({ initialImages = [] }: UseImageGalleryProps = {
     });
   }, [images, searchTerm]);
 
-  // Calculate if there are more images to load
+
   const hasMore = currentPage * IMAGES_PER_PAGE < filteredImages().length;
 
-  // Function to add new images to the gallery
   const addImages = useCallback((newImages: ImageType[]) => {
     setImages(prevImages => [...newImages, ...prevImages]);
   }, []);
 
-  // Function to delete an image
   const deleteImage = useCallback(async (id: string) => {
     try {
       setError(null);
       
-      // Find the image to get its publicId
       const imageToDelete = images.find(img => img.id === id);
       
       if (!imageToDelete) {
@@ -85,21 +77,17 @@ export const useImageGallery = ({ initialImages = [] }: UseImageGalleryProps = {
       
       console.log('Deleting image from gallery:', imageToDelete.publicId);
       
-      // For UI responsiveness, remove from state first
       setImages(prevImages => prevImages.filter(img => img.id !== id));
       
-      // If the deleted image was selected, clear selection
       if (selectedImage?.id === id) {
         setSelectedImage(null);
       }
       
-      // Delete from Cloudinary (this is now simplified and always returns true)
       const success = await deleteFromCloudinary(imageToDelete.publicId);
       
       return success;
     } catch (err) {
       console.error('Error in gallery delete process:', err);
-      // We're still returning true even if there's an error to allow the UI to update
       return true;
     }
   }, [images, selectedImage]);
@@ -109,12 +97,10 @@ export const useImageGallery = ({ initialImages = [] }: UseImageGalleryProps = {
     setSelectedImage(image);
   }, []);
 
-  // Function to load more images for infinite scroll
   const loadMore = useCallback(() => {
     setCurrentPage(prevPage => prevPage + 1);
   }, []);
 
-  // Get current images to display based on page
   const getCurrentImages = useCallback(() => {
     return filteredImages().slice(0, currentPage * IMAGES_PER_PAGE);
   }, [filteredImages, currentPage]);

@@ -1,0 +1,48 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .photo {
+      fill: #dde2e9;
+    }
+    .frame {
+      stroke: #94a3b8;
+      stroke-width: 3;
+      fill: none;
+    }
+    .mountain {
+      fill: #64748b;
+    }
+    .sun {
+      fill: #64748b;
+    }
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0px); }
+    }
+    .floating {
+      animation: float 5s ease-in-out infinite;
+    }
+  </style>
+  
+  <g class="floating">
+    <!-- Main frame -->
+    <rect x="40" y="30" width="120" height="140" rx="8" class="frame" />
+    
+    <!-- Photo background -->
+    <rect x="50" y="40" width="100" height="80" rx="4" class="photo" />
+    
+    <!-- Mountains -->
+    <path d="M50 120L75 80L100 110L125 70L150 120H50Z" class="mountain" />
+    
+    <!-- Sun -->
+    <circle cx="120" cy="60" r="10" class="sun" />
+    
+    <!-- Missing image icon -->
+    <g transform="translate(85, 65)">
+      <path d="M15,5 L15,35 M5,15 L25,15 M5,25 L25,25" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" />
+    </g>
+  </g>
+  
+  <!-- Reflection -->
+  <rect x="40" y="170" width="120" height="2" rx="1" fill="#dde2e9" opacity="0.5" />
+</svg> 

@@ -25,7 +25,6 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const { uploading, uploadProgress, uploadMultipleImages, error } = useImageUpload();
 
-  // Handle drag events
   const handleDrag = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -37,7 +36,6 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
     }
   }, []);
 
-  // Handle drop event
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -51,7 +49,6 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
     }
   }, []);
 
-  // Handle file input change
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files).filter(file => 
@@ -61,16 +58,16 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
     }
   }, []);
 
-  // Handle upload button click
   const handleUpload = useCallback(async () => {
     if (selectedFiles.length > 0) {
       const uploadedImages = await uploadMultipleImages(selectedFiles);
       if (uploadedImages.length > 0) {
         onImagesUploaded(uploadedImages);
         setSelectedFiles([]);
+        onClose();
       }
     }
-  }, [selectedFiles, uploadMultipleImages, onImagesUploaded]);
+  }, [selectedFiles, uploadMultipleImages, onImagesUploaded, onClose]);
 
   return (
     <Modal
