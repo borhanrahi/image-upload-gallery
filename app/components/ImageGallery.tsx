@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { 
   Box, 
   Typography, 
@@ -34,6 +34,7 @@ const ImageGallery = ({ initialImages = [], searchTerm, onAddImages }: ImageGall
     setSearchTerm,
   } = useImageGallery({ initialImages });
   
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const theme = useTheme();
   const observer = useRef<IntersectionObserver | null>(null);
   
@@ -70,17 +71,24 @@ const ImageGallery = ({ initialImages = [], searchTerm, onAddImages }: ImageGall
   };
   
   const handleDeleteImage = async (id: string) => {
-    console.log('Deleting image with ID:', id);
-    const success = await deleteImage(id);
-    
-    // If deletion was successful, update the parent component with the new list of images
-    if (success) {
-      // Find the image that was deleted and remove it from the initialImages array
-      const updatedImages = initialImages.filter(img => img.id !== id);
-      // This triggers parent to update localStorage and refresh the gallery without the deleted image
-      onAddImages([...updatedImages]); 
-    } else {
-      console.error('Failed to delete image with ID:', id);
+    try {
+      setDeleteError(null);
+      console.log('Starting deletion process for image with ID:', id);
+      
+      // Attempt to delete the image
+      const success = await deleteImage(id);
+      
+      if (success) {
+        console.log('Image successfully removed from UI');
+        // In the simplified approach, we're always returning true from deleteImage
+        // Notify parent to update localStorage
+        onAddImages([]);
+      } else {
+        setDeleteError('Failed to delete image. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error in image deletion process:', err);
+      setDeleteError('An error occurred during deletion. Please try again.');
     }
   };
   
@@ -89,6 +97,12 @@ const ImageGallery = ({ initialImages = [], searchTerm, onAddImages }: ImageGall
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
+        </Alert>
+      )}
+      
+      {deleteError && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setDeleteError(null)}>
+          {deleteError}
         </Alert>
       )}
       

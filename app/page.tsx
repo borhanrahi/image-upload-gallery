@@ -16,7 +16,7 @@ const demoImages: ImageType[] = [
     publicId: 'sample',
     width: 864,
     height: 576,
-    createdAt: new Date().toISOString(),
+    createdAt: '2023-01-01T00:00:00Z', // Use static date string
   },
   {
     id: '2',
@@ -25,7 +25,7 @@ const demoImages: ImageType[] = [
     publicId: 'cld-sample-2',
     width: 800,
     height: 600,
-    createdAt: new Date().toISOString(),
+    createdAt: '2023-01-01T00:00:00Z', // Use static date string
   },
   {
     id: '3',
@@ -34,7 +34,7 @@ const demoImages: ImageType[] = [
     publicId: 'cld-sample-3',
     width: 800,
     height: 600,
-    createdAt: new Date().toISOString(),
+    createdAt: '2023-01-01T00:00:00Z', // Use static date string
   },
   {
     id: '4',
@@ -43,7 +43,7 @@ const demoImages: ImageType[] = [
     publicId: 'cld-sample-4',
     width: 800,
     height: 600,
-    createdAt: new Date().toISOString(),
+    createdAt: '2023-01-01T00:00:00Z', // Use static date string
   },
   {
     id: '5',
@@ -52,7 +52,7 @@ const demoImages: ImageType[] = [
     publicId: 'cld-sample-5',
     width: 800,
     height: 600,
-    createdAt: new Date().toISOString(),
+    createdAt: '2023-01-01T00:00:00Z', // Use static date string
   },
 ];
 
@@ -60,31 +60,36 @@ const STORAGE_KEY = 'gallery_images';
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [images, setImages] = useState<ImageType[]>([]);
-  
-  // Load images from localStorage on initial render
+  const [images, setImages] = useState<ImageType[]>(demoImages);
+  const [isClient, setIsClient] = useState(false);
+
+  // Set isClient flag when component mounts
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+  
+  // Load images from localStorage on initial client render
+  useEffect(() => {
+    if (!isClient) return;
+    
     const loadImagesFromStorage = () => {
       try {
         const savedImages = localStorage.getItem(STORAGE_KEY);
         if (savedImages) {
           const parsedImages = JSON.parse(savedImages) as ImageType[];
           setImages([...parsedImages, ...demoImages]);
-        } else {
-          setImages(demoImages);
         }
       } catch (error) {
         console.error('Error loading images from localStorage:', error);
-        setImages(demoImages);
       }
     };
     
     loadImagesFromStorage();
-  }, []);
+  }, [isClient]);
   
   // Save images to localStorage whenever they change
   useEffect(() => {
-    if (images.length === 0) return;
+    if (!isClient || images.length === 0) return;
     
     try {
       // Only save user-uploaded images, not the demo ones
@@ -97,13 +102,15 @@ export default function Home() {
     } catch (error) {
       console.error('Error saving images to localStorage:', error);
     }
-  }, [images]);
+  }, [images, isClient]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
   };
 
   const handleImagesUploaded = (newImages: ImageType[]) => {
+    if (!isClient) return;
+    
     if (newImages.length === 0) {
       // This is a special case for deletion - we don't want to add anything,
       // Just refresh the gallery with what we have in localStorage
