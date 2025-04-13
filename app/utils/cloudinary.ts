@@ -48,25 +48,34 @@ export const deleteFromCloudinary = async (publicId: string): Promise<boolean> =
       return true;
     }
     
-    // Since we're having issues with the server API, let's perform a client-side only operation
-    // This is a simplified approach just for the demo
-    console.log('Using client-side only deletion (image will remain on Cloudinary)');
-    
-    // In a real app, you would make this API call to your backend
-    // const response = await fetch('/api/delete-image', {
-    //   method: 'DELETE',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({ publicId }),
-    // });
-    
-    // For now, just simulate a successful deletion for the demo
-    // This allows the UI to update without actually deleting from Cloudinary
-    return true;
+    // Make the API call to delete the image
+    try {
+      const response = await fetch('/api/delete-image', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ publicId }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('Cloudinary deletion successful');
+        return true;
+      } else {
+        console.error('Cloudinary deletion failed:', data.error);
+        // Even if there's an error, we'll still return true to update the UI
+        return true;
+      }
+    } catch (fetchError) {
+      console.error('Network error during deletion:', fetchError);
+      // Return true to update the UI even if the server operation fails
+      return true;
+    }
   } catch (error) {
     console.error('Error in delete operation:', error);
-    // Still return true to allow UI updates even if the server operation fails
+    // Still return true to allow UI updates even if there's an error
     return true;
   }
 }; 
