@@ -9,6 +9,7 @@ import { ImageType } from './types';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import UploadModal from './components/UploadModal';
 import UploadButton from './components/UploadButton';
+import toast from 'react-hot-toast';
 
 // Factory function to create demo images with consistent properties
 const createDemoImage = (id: string, filename: string, title: string): ImageType => ({
@@ -93,6 +94,7 @@ export default function Home() {
         setImages([...userImages, ...filteredDemoImages]);
       } catch (error) {
         console.error('Error loading images from localStorage:', error);
+        toast.error('Error loading saved images');
       }
     };
     
@@ -106,6 +108,7 @@ export default function Home() {
       localStorage.setItem(DELETED_IMAGES_KEY, JSON.stringify(deletedImageIds));
     } catch (error) {
       console.error('Error saving deleted image IDs to localStorage:', error);
+      toast.error('Error saving deleted image information');
     }
   }, [deletedImageIds, isClient]);
   
@@ -121,6 +124,7 @@ export default function Home() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userImages));
     } catch (error) {
       console.error('Error saving images to localStorage:', error);
+      toast.error('Error saving image gallery');
     }
   }, [images, isClient]);
 
@@ -147,6 +151,7 @@ export default function Home() {
         setImages([...userImages, ...filteredDemoImages]);
       } catch (error) {
         console.error('Error loading images from localStorage after deletion:', error);
+        toast.error('Error refreshing gallery');
       }
     } else {
       console.log('Adding', newImages.length, 'new images to gallery');
@@ -182,7 +187,7 @@ export default function Home() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Header onSearch={handleSearch} onImagesUploaded={handleImagesUploaded} />
+      <Header onImagesUploaded={handleImagesUploaded} />
 
       {/* Hero Section */}
       <Box

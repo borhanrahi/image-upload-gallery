@@ -1,21 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import ThemeRegistry from './components/ThemeRegistry';
 import "./globals.css";
+import ThemeRegistry from './components/ThemeRegistry';
+import { Toaster } from "react-hot-toast";
+import { Geist } from "next/font/google";
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: "Modern Image Gallery",
-  description: "A beautiful modern image gallery with upload and delete functionality",
+  description: "A beautiful modern image gallery built with Next.js and Material UI",
 };
 
 export default function RootLayout({
@@ -24,10 +19,40 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={geistSans.className}>
+      <body>
         <ThemeRegistry>
           {children}
+          <Toaster 
+            position="bottom-right"
+            toastOptions={{
+              duration: 3000,
+              style: {
+                background: '#333',
+                color: '#fff',
+                borderRadius: '8px',
+                padding: '16px',
+              },
+              success: {
+                style: {
+                  background: '#1E883F',
+                },
+                iconTheme: {
+                  primary: 'white',
+                  secondary: '#1E883F'
+                }
+              },
+              error: {
+                style: {
+                  background: '#E11D48',
+                },
+                iconTheme: {
+                  primary: 'white',
+                  secondary: '#E11D48'
+                }
+              }
+            }}
+          />
         </ThemeRegistry>
       </body>
     </html>

@@ -13,12 +13,54 @@ import {
   CircularProgress,
   Paper,
   Fade,
-  Zoom
+  Zoom,
+  InputBase,
+  alpha,
+  styled,
+  IconButton
 } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
 import ImageCard from './ImageCard';
 import ImagePreview from './ImagePreview';
 import { ImageType } from '../types';
 import { useImageGallery } from '../hooks/useImageGallery';
+
+const Search = styled('div')(({ theme }) => ({
+  position: 'relative',
+  borderRadius: theme.shape.borderRadius * 3,
+  backgroundColor: alpha(theme.palette.common.black, 0.04),
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.common.black, 0.08),
+  },
+  width: '100%',
+  maxWidth: '300px',
+  transition: 'all 0.3s ease',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+  border: '1px solid rgba(0,0,0,0.05)'
+}));
+
+const SearchIconWrapper = styled('div')(({ theme }) => ({
+  padding: theme.spacing(0, 2),
+  height: '100%',
+  position: 'absolute',
+  pointerEvents: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: alpha(theme.palette.common.black, 0.5)
+}));
+
+const StyledInputBase = styled(InputBase)(({ theme }) => ({
+  color: 'inherit',
+  width: '100%',
+  '& .MuiInputBase-input': {
+    padding: theme.spacing(1, 1, 1, 0),
+    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
+    transition: theme.transitions.create('width'),
+    width: '100%',
+  },
+}));
 
 export interface ImageGalleryProps {
   initialImages: ImageType[];
@@ -31,7 +73,7 @@ const IMAGES_PER_PAGE = 8; // 4 columns x 2 rows
 
 export default function ImageGallery({ 
   initialImages, 
-  searchTerm, 
+  searchTerm: initialSearchTerm,
   onAddImages,
   onImageDeleted
 }: ImageGalleryProps) {
@@ -45,6 +87,9 @@ export default function ImageGallery({
   const [totalPages, setTotalPages] = useState(1);
   const [paginatedImages, setPaginatedImages] = useState<ImageType[]>([]);
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [localSearchTerm, setLocalSearchTerm] = useState(initialSearchTerm);
+  const [showError, setShowError] = useState(false);
   
   const isSmallScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   const isMediumScreen = useMediaQuery((theme: Theme) => theme.breakpoints.between('sm', 'md'));
@@ -52,16 +97,18 @@ export default function ImageGallery({
   useEffect(() => {
     if (!images) return;
     
-    const filtered = searchTerm
-      ? images.filter(img => 
-          img.title.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      : images;
+    const filtered = localSearchTerm ? images.filter(img => {
+      const title = img.title?.toLowerCase() || '';
+      const tags = img.tags?.map(tag => tag.toLowerCase()) || [];
+      const searchValue = localSearchTerm.toLowerCase();
+      
+      return title.includes(searchValue) || tags.some(tag => tag.includes(searchValue));
+    }) : images;
     
     setFilteredImages(filtered);
     setTotalPages(Math.ceil(filtered.length / IMAGES_PER_PAGE));
     setCurrentPage(1); 
-  }, [images, searchTerm]);
+  }, [images, localSearchTerm]);
   
   useEffect(() => {
     const startIndex = (currentPage - 1) * IMAGES_PER_PAGE;
@@ -73,17 +120,18 @@ export default function ImageGallery({
     setDeleteError(null);
     
     try {
-      const success = await deleteImage(id);
-      
-      if (success) {
-        console.log('Image deleted successfully, notifying parent component');
-        onImageDeleted(id);
-      } else {
-        console.error('Failed to delete image');
-        setDeleteError('Failed to delete image');
-      }
+      // Call deleteImage without awaiting to prevent double toast
+      // The deleteImage function already shows a success toast
+      deleteImage(id)
+        .then(() => {
+          // Just notify parent component that an image was deleted
+          onImageDeleted(id);
+        })
+        .catch(error => {
+          console.error('Error in delete image promise:', error);
+        });
     } catch (error) {
-      console.error('Error deleting image:', error);
+      console.error('Error initiating image deletion:', error);
       setDeleteError('Error deleting image');
     }
   };
@@ -101,10 +149,21 @@ export default function ImageGallery({
   
   const handlePreviewOpen = (image: ImageType) => {
     setSelectedImage(image);
+    setPreviewOpen(true);
   };
   
   const handlePreviewClose = () => {
     setSelectedImage(null);
+    setPreviewOpen(false);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalSearchTerm(value);
+  };
+
+  const handleClearSearch = () => {
+    setLocalSearchTerm('');
   };
 
   return (
@@ -208,10 +267,10 @@ export default function ImageGallery({
                   WebkitTextFillColor: 'transparent'
                 }}
               >
-                {searchTerm ? 'No images matching your search' : 'Your gallery is empty'}
+                {localSearchTerm ? 'No images matching your search' : 'Your gallery is empty'}
               </Typography>
               <Typography variant="body1" sx={{ mt: 1, maxWidth: '500px', mx: 'auto', color: 'text.secondary' }}>
-                {searchTerm 
+                {localSearchTerm 
                   ? 'Try a different search term or clear your search to see all images'
                   : 'Upload some beautiful images to start building your collection'
                 }
@@ -254,7 +313,7 @@ export default function ImageGallery({
                   borderRadius: 1,
                 }}
               />
-              {searchTerm ? 'Search Results' : 'Gallery Items'}
+              {localSearchTerm ? 'Search Results' : 'Gallery Items'}
               <Box
                 component="span"
                 sx={{
@@ -270,38 +329,96 @@ export default function ImageGallery({
                 {filteredImages.length}
               </Box>
             </Typography>
+            
+            {/* Search Input */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Search>
+                <SearchIconWrapper>
+                  <SearchIcon />
+                </SearchIconWrapper>
+                <StyledInputBase
+                  placeholder="Search gallery…"
+                  inputProps={{ 'aria-label': 'search gallery' }}
+                  value={localSearchTerm}
+                  onChange={handleSearchChange}
+                />
+                {localSearchTerm && (
+                  <IconButton 
+                    size="small" 
+                    onClick={handleClearSearch}
+                    sx={{ 
+                      position: 'absolute', 
+                      right: 8, 
+                      top: '50%', 
+                      transform: 'translateY(-50%)',
+                      color: 'rgba(0,0,0,0.4)'
+                    }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </Search>
+            </Box>
           </Box>
           
-
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: getGridColumns(),
-            gap: 3,
-            py: 1
-          }}>
-            {paginatedImages.map((image, index) => (
-              <Zoom 
-                in={true} 
-                style={{ 
-                  transitionDelay: `${index * 50}ms`,
-                  transitionDuration: '350ms'
-                }}
-                key={image.id}
-              >
-                <Box sx={{ 
-                  transform: 'perspective(1000px)',
-                  transformStyle: 'preserve-3d',
-                  height: '100%'
-                }}>
-                  <ImageCard
-                    image={image}
-                    onOpenPreview={handlePreviewOpen}
-                    onDelete={handleDeleteImage}
-                  />
-                </Box>
-              </Zoom>
-            ))}
-          </Box>
+          {/* No Results Message */}
+          {filteredImages.length === 0 && (
+            <Paper 
+              elevation={0}
+              sx={{ 
+                p: 4, 
+                textAlign: 'center',
+                borderRadius: 2,
+                backgroundColor: 'rgba(0,0,0,0.02)',
+                border: '1px dashed rgba(0,0,0,0.1)'
+              }}
+            >
+              <Typography variant="h6" sx={{ mb: 1, color: 'text.secondary' }}>
+                No images found
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {localSearchTerm ? 
+                  `No results match "${localSearchTerm}". Try a different search term.` :
+                  "There are no images in your gallery yet. Try uploading some!"
+                }
+              </Typography>
+            </Paper>
+          )}
+          
+          {/* Gallery Grid */}
+          {filteredImages.length > 0 && (
+            <Box 
+              sx={{ 
+                display: 'grid',
+                gridTemplateColumns: getGridColumns(),
+                gap: 3,
+                py: 1
+              }}
+            >
+              {paginatedImages.map((image, index) => (
+                <Zoom 
+                  in={true} 
+                  style={{ 
+                    transitionDelay: `${index * 50}ms`,
+                    transitionDuration: '350ms'
+                  }}
+                  key={image.id}
+                >
+                  <Box sx={{ 
+                    transform: 'perspective(1000px)',
+                    transformStyle: 'preserve-3d',
+                    height: '100%'
+                  }}>
+                    <ImageCard
+                      image={image}
+                      onOpenPreview={handlePreviewOpen}
+                      onDelete={handleDeleteImage}
+                    />
+                  </Box>
+                </Zoom>
+              ))}
+            </Box>
+          )}
           
           {totalPages > 1 && (
             <Box sx={{ 
@@ -348,11 +465,22 @@ export default function ImageGallery({
       )}
       
       <ImagePreview 
-        open={!!selectedImage} 
+        open={previewOpen} 
         onClose={handlePreviewClose}
         image={selectedImage}
         images={filteredImages}
       />
+      
+      {/* Error Snackbar */}
+      <Snackbar
+        open={showError}
+        autoHideDuration={5000}
+        onClose={() => setShowError(false)}
+      >
+        <Alert onClose={() => setShowError(false)} severity="error">
+          Failed to delete image. Please try again.
+        </Alert>
+      </Snackbar>
     </Container>
   );
 } 

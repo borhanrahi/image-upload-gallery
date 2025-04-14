@@ -1,5 +1,5 @@
 "use client"
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { 
   Modal, 
   Box, 
@@ -8,11 +8,19 @@ import {
   Paper, 
   LinearProgress,
   Alert,
-  Stack
+  Stack,
+  IconButton,
+  Grid,
+  Card,
+  CardMedia,
+  Tooltip
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CloseIcon from '@mui/icons-material/Close';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { ImageType } from '../types';
+import toast from 'react-hot-toast';
 
 interface UploadModalProps {
   open: boolean;
@@ -24,6 +32,7 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const { uploading, uploadProgress, uploadMultipleImages, error } = useImageUpload();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -45,7 +54,9 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
       const filesArray = Array.from(e.dataTransfer.files).filter(file => 
         file.type.startsWith('image/')
       );
-      setSelectedFiles(filesArray);
+      
+      // Add new files to existing selection
+      setSelectedFiles(prev => [...prev, ...filesArray]);
     }
   }, []);
 
@@ -54,17 +65,36 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
       const filesArray = Array.from(e.target.files).filter(file => 
         file.type.startsWith('image/')
       );
-      setSelectedFiles(filesArray);
+      
+      // Add new files to existing selection
+      setSelectedFiles(prev => [...prev, ...filesArray]);
+      
+      // Reset the input value so the same file can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   }, []);
 
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleUpload = useCallback(async () => {
     if (selectedFiles.length > 0) {
-      const uploadedImages = await uploadMultipleImages(selectedFiles);
-      if (uploadedImages.length > 0) {
-        onImagesUploaded(uploadedImages);
-        setSelectedFiles([]);
-        onClose();
+      try {
+        const uploadedImages = await uploadMultipleImages(selectedFiles);
+        if (uploadedImages.length > 0) {
+          toast.success(`Successfully uploaded ${uploadedImages.length} images`);
+          onImagesUploaded(uploadedImages);
+          setSelectedFiles([]);
+          onClose();
+        } else {
+          toast.error('Failed to upload images');
+        }
+      } catch (error) {
+        toast.error('An error occurred during upload');
+        console.error('Upload error:', error);
       }
     }
   }, [selectedFiles, uploadMultipleImages, onImagesUploaded, onClose]);
@@ -86,15 +116,22 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
         elevation={8}
         sx={{
           width: '100%',
-          maxWidth: 600,
+          maxWidth: 800,
           p: 4,
           outline: 'none',
           borderRadius: 2,
+          maxHeight: '90vh',
+          overflowY: 'auto',
         }}
       >
-        <Typography id="upload-modal-title" variant="h5" component="h2" gutterBottom>
-          Upload Images
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography id="upload-modal-title" variant="h5" component="h2">
+            Upload Images
+          </Typography>
+          <IconButton onClick={uploading ? undefined : onClose} disabled={uploading}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
         
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -112,7 +149,7 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
             borderColor: dragActive ? 'primary.main' : 'grey.300',
             borderRadius: 2,
             p: 4,
-            mb: 2,
+            mb: 3,
             textAlign: 'center',
             backgroundColor: dragActive ? 'rgba(25, 118, 210, 0.04)' : 'transparent',
             transition: 'all 0.2s ease',
@@ -126,6 +163,7 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
             accept="image/*"
             onChange={handleFileChange}
             style={{ display: 'none' }}
+            ref={fileInputRef}
           />
           
           <label htmlFor="file-upload">
@@ -145,31 +183,120 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
               >
                 Browse Files
               </Button>
+              <Typography variant="caption" sx={{ mt: 2, color: 'text.secondary' }}>
+                You can select multiple files at once
+              </Typography>
             </Box>
           </label>
         </Box>
         
         {selectedFiles.length > 0 && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              {selectedFiles.length} {selectedFiles.length === 1 ? 'file' : 'files'} selected
-            </Typography>
-            <Stack spacing={1} sx={{ maxHeight: 100, overflowY: 'auto' }}>
-              {selectedFiles.map((file, index) => (
-                <Typography key={index} variant="body2" noWrap>
-                  {file.name} ({Math.round(file.size / 1024)} KB)
-                </Typography>
-              ))}
-            </Stack>
+          <Box sx={{ mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="subtitle1" fontWeight={600}>
+                {selectedFiles.length} {selectedFiles.length === 1 ? 'file' : 'files'} selected
+              </Typography>
+              <Button 
+                size="small" 
+                onClick={() => setSelectedFiles([])} 
+                color="error" 
+                disabled={uploading}
+                startIcon={<DeleteIcon />}
+              >
+                Remove All
+              </Button>
+            </Box>
+            
+            <Grid container spacing={2}>
+              {selectedFiles.map((file, index) => {
+                const imageUrl = URL.createObjectURL(file);
+                
+                return (
+                  <Grid item xs={6} sm={4} md={3} key={index}>
+                    <Card 
+                      elevation={0} 
+                      sx={{ 
+                        position: 'relative',
+                        border: '1px solid rgba(0,0,0,0.1)',
+                        borderRadius: 2,
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <CardMedia
+                        component="img"
+                        image={imageUrl}
+                        alt={file.name}
+                        sx={{ 
+                          height: 140,
+                          objectFit: 'cover'
+                        }}
+                        onLoad={() => URL.revokeObjectURL(imageUrl)}
+                      />
+                      <Box sx={{ 
+                        p: 1, 
+                        display: 'flex', 
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        backgroundColor: 'rgba(0,0,0,0.02)'
+                      }}>
+                        <Tooltip title={file.name}>
+                          <Typography 
+                            variant="caption" 
+                            noWrap 
+                            sx={{ 
+                              maxWidth: '70%', 
+                              display: 'block',
+                              color: 'text.secondary',
+                              fontSize: '0.7rem'
+                            }}
+                          >
+                            {file.name}
+                          </Typography>
+                        </Tooltip>
+                        <Tooltip title="Remove">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleRemoveFile(index)}
+                            disabled={uploading}
+                            sx={{ 
+                              p: 0.5,
+                              color: 'text.secondary',
+                              '&:hover': {
+                                color: 'error.main'
+                              }
+                            }}
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </Card>
+                  </Grid>
+                );
+              })}
+            </Grid>
           </Box>
         )}
         
         {uploading && (
-          <Box sx={{ width: '100%', mb: 2 }}>
-            <Typography variant="body2" color="textSecondary" gutterBottom>
-              Uploading... {Math.round(uploadProgress)}%
+          <Box sx={{ width: '100%', mb: 3 }}>
+            <Typography variant="body2" color="textSecondary" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Uploading images...</span>
+              <span>{Math.round(uploadProgress)}%</span>
             </Typography>
-            <LinearProgress variant="determinate" value={uploadProgress} />
+            <LinearProgress 
+              variant="determinate" 
+              value={uploadProgress} 
+              sx={{
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 4,
+                  backgroundImage: 'linear-gradient(45deg, #1976d2, #42a5f5)'
+                }
+              }}
+            />
           </Box>
         )}
         
@@ -186,8 +313,9 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
             variant="contained"
             color="primary"
             disabled={selectedFiles.length === 0 || uploading}
+            startIcon={<CloudUploadIcon />}
           >
-            Upload
+            Upload {selectedFiles.length > 0 ? `(${selectedFiles.length})` : ''}
           </Button>
         </Box>
       </Paper>

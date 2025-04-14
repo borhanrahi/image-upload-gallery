@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ImageType } from '../types';
 import { deleteFromCloudinary } from '../utils/cloudinary';
+import toast from 'react-hot-toast';
 
 interface UseImageGalleryProps {
   initialImages?: ImageType[];
@@ -26,11 +27,13 @@ interface UseImageGalleryReturn {
 
 const IMAGES_PER_PAGE = 12;
 
-export const useImageGallery = ({ initialImages = [] }: UseImageGalleryProps = {}): UseImageGalleryReturn => {
+export const useImageGallery = ({ initialImages = [] }: UseImageGalleryProps): UseImageGalleryReturn => {
   const [images, setImages] = useState<ImageType[]>(initialImages);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<ImageType | null>(null);
+  const [filteredImages, setFilteredImages] = useState<ImageType[]>(images);
+  const [hasMore, setHasMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -38,71 +41,70 @@ export const useImageGallery = ({ initialImages = [] }: UseImageGalleryProps = {
     setImages(initialImages);
   }, [initialImages]);
 
-  const filteredImages = useCallback(() => {
-    if (!searchTerm.trim()) {
-      return images;
-    }
+  useEffect(() => {
+    const filtered = searchTerm 
+      ? images.filter(img => 
+          img.title.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : images;
     
-    const term = searchTerm.toLowerCase().trim();
-    return images.filter(image => {
-      if (image.title.toLowerCase().includes(term)) {
-        return true;
-      }
-      
-      if (image.tags?.some(tag => tag.toLowerCase().includes(term))) {
-        return true;
-      }
-      
-      return false;
-    });
-  }, [images, searchTerm]);
-
-
-  const hasMore = currentPage * IMAGES_PER_PAGE < filteredImages().length;
+    setFilteredImages(filtered);
+    setHasMore(filtered.length > currentPage * IMAGES_PER_PAGE);
+  }, [images, searchTerm, currentPage]);
 
   const addImages = useCallback((newImages: ImageType[]) => {
-    setImages(prevImages => [...newImages, ...prevImages]);
+    setImages(prev => [...newImages, ...prev]);
+    toast.success(`Added ${newImages.length} new ${newImages.length === 1 ? 'image' : 'images'}`);
   }, []);
 
-  const deleteImage = useCallback(async (id: string) => {
+  const deleteImage = useCallback(async (id: string): Promise<boolean> => {
     try {
-      setError(null);
-      
       const imageToDelete = images.find(img => img.id === id);
       
       if (!imageToDelete) {
-        console.warn('Image not found for deletion:', id);
+        setError('Image not found');
+        toast.error('Image not found');
         return false;
       }
       
-      console.log('Deleting image from gallery:', imageToDelete.publicId);
+      // Remove the image from state immediately for better UX
+      setImages(prev => prev.filter(img => img.id !== id));
+      toast.success('Image deleted successfully');
       
-      setImages(prevImages => prevImages.filter(img => img.id !== id));
-      
-      if (selectedImage?.id === id) {
-        setSelectedImage(null);
+      // Then handle the cloud deletion in the background
+      if (imageToDelete.publicId) {
+        try {
+          const success = await deleteFromCloudinary(imageToDelete.publicId);
+          
+          if (!success) {
+            console.error('Failed to delete image from cloud storage, but removed from gallery');
+            // Don't show error toast since the image is already removed from gallery
+          }
+        } catch (error) {
+          console.error('Error deleting from Cloudinary:', error);
+          // Don't show error toast since the image is already removed from gallery
+        }
       }
       
-      const success = await deleteFromCloudinary(imageToDelete.publicId);
-      
-      return success;
-    } catch (err) {
-      console.error('Error in gallery delete process:', err);
       return true;
+    } catch (err) {
+      console.error('Error deleting image:', err);
+      setError('An error occurred while deleting the image');
+      toast.error('An error occurred while deleting the image');
+      return false;
     }
-  }, [images, selectedImage]);
+  }, [images]);
 
-  // Function to select an image for preview
   const selectImage = useCallback((image: ImageType | null) => {
     setSelectedImage(image);
   }, []);
 
   const loadMore = useCallback(() => {
-    setCurrentPage(prevPage => prevPage + 1);
+    setCurrentPage(prev => prev + 1);
   }, []);
 
   const getCurrentImages = useCallback(() => {
-    return filteredImages().slice(0, currentPage * IMAGES_PER_PAGE);
+    return filteredImages.slice(0, currentPage * IMAGES_PER_PAGE);
   }, [filteredImages, currentPage]);
 
   return {
@@ -110,7 +112,7 @@ export const useImageGallery = ({ initialImages = [] }: UseImageGalleryProps = {
     loading,
     error,
     selectedImage,
-    filteredImages: getCurrentImages(),
+    filteredImages,
     hasMore,
     searchTerm,
     currentPage,
