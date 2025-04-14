@@ -69,7 +69,7 @@ export interface ImageGalleryProps {
   onImageDeleted: (id: string) => void;
 }
 
-const IMAGES_PER_PAGE = 8; // 4 columns x 2 rows
+const IMAGES_PER_PAGE = 8; 
 
 export default function ImageGallery({ 
   initialImages, 
@@ -120,11 +120,8 @@ export default function ImageGallery({
     setDeleteError(null);
     
     try {
-      // Call deleteImage without awaiting to prevent double toast
-      // The deleteImage function already shows a success toast
       deleteImage(id)
         .then(() => {
-          // Just notify parent component that an image was deleted
           onImageDeleted(id);
         })
         .catch(error => {
@@ -360,7 +357,6 @@ export default function ImageGallery({
             </Box>
           </Box>
           
-          {/* No Results Message */}
           {filteredImages.length === 0 && (
             <Paper 
               elevation={0}
@@ -470,7 +466,6 @@ export default function ImageGallery({
         images={filteredImages}
       />
       
-      {/* Error Snackbar */}
       <Snackbar
         open={showError}
         autoHideDuration={5000}

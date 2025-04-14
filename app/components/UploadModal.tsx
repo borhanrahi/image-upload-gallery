@@ -55,7 +55,6 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
         file.type.startsWith('image/')
       );
       
-      // Add new files to existing selection
       setSelectedFiles(prev => [...prev, ...filesArray]);
     }
   }, []);
@@ -66,10 +65,8 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
         file.type.startsWith('image/')
       );
       
-      // Add new files to existing selection
       setSelectedFiles(prev => [...prev, ...filesArray]);
       
-      // Reset the input value so the same file can be selected again
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -286,23 +283,101 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
         
         {uploading && (
           <Box sx={{ width: '100%', mb: 3 }}>
-            <Typography variant="body2" color="textSecondary" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Uploading images...</span>
-              <span>{Math.round(uploadProgress)}%</span>
+            <Typography variant="body2" fontWeight={500} gutterBottom sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Upload Progress</span>
+              <span style={{ 
+                color: uploadProgress >= 100 ? '#4caf50' : '#1976d2',
+                transition: 'color 0.3s ease'
+              }}>
+                {Math.min(100, Math.round(uploadProgress))}%
+              </span>
             </Typography>
             <LinearProgress 
               variant="determinate" 
-              value={uploadProgress} 
+              value={Math.min(100, uploadProgress)} 
               sx={{
-                height: 8,
-                borderRadius: 4,
+                height: 10,
+                borderRadius: 5,
                 backgroundColor: 'rgba(25, 118, 210, 0.1)',
                 '& .MuiLinearProgress-bar': {
-                  borderRadius: 4,
-                  backgroundImage: 'linear-gradient(45deg, #1976d2, #42a5f5)'
+                  borderRadius: 5,
+                  backgroundImage: uploadProgress >= 100 
+                    ? 'linear-gradient(45deg, #4caf50, #81c784)' 
+                    : 'linear-gradient(45deg, #1976d2, #42a5f5)',
+                  transition: 'transform 0.4s ease, background-image 0.5s ease'
                 }
               }}
             />
+            
+            <Box sx={{ 
+              mt: 2, 
+              py: 2, 
+              px: 3, 
+              borderRadius: 2, 
+              backgroundColor: uploadProgress >= 100 ? 'rgba(76, 175, 80, 0.08)' : 'rgba(25, 118, 210, 0.05)',
+              border: `1px solid ${uploadProgress >= 100 ? 'rgba(76, 175, 80, 0.2)' : 'rgba(25, 118, 210, 0.1)'}`,
+              transition: 'all 0.5s ease'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {uploadProgress >= 100 ? (
+                    <Box 
+                      component="span" 
+                      sx={{ 
+                        width: 20, 
+                        height: 20, 
+                        borderRadius: '50%', 
+                        bgcolor: 'rgba(76, 175, 80, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <Box 
+                        component="span" 
+                        sx={{ 
+                          width: 10, 
+                          height: 10, 
+                          borderRadius: '50%', 
+                          bgcolor: '#4caf50' 
+                        }} 
+                      />
+                    </Box>
+                  ) : (
+                    <Box sx={{ 
+                      width: 14, 
+                      height: 14, 
+                      borderRadius: '50%', 
+                      border: '2px solid rgba(25, 118, 210, 0.5)',
+                      borderTopColor: 'transparent',
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': {
+                        '0%': { transform: 'rotate(0deg)' },
+                        '100%': { transform: 'rotate(360deg)' }
+                      }
+                    }} />
+                  )}
+                  <Typography variant="body2" sx={{ 
+                    fontWeight: 500, 
+                    color: uploadProgress >= 100 ? '#4caf50' : 'text.secondary',
+                    transition: 'color 0.3s ease'
+                  }}>
+                    {uploadProgress < 100 
+                      ? `Processing ${selectedFiles.length} image${selectedFiles.length > 1 ? 's' : ''}...` 
+                      : `Upload complete!`
+                    }
+                  </Typography>
+                </Box>
+                
+                <Typography variant="caption" sx={{ 
+                  color: uploadProgress >= 100 ? '#4caf50' : 'primary.main',
+                  fontWeight: 600,
+                  transition: 'color 0.3s ease'
+                }}>
+                  {uploadProgress < 100 ? 'Uploading...' : 'Completed'}
+                </Typography>
+              </Box>
+            </Box>
           </Box>
         )}
         

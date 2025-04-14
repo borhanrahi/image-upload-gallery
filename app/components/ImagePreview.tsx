@@ -40,12 +40,38 @@ interface ImagePreviewProps {
   images: ImageType[];
 }
 
-// Fallback images when original images fail to load
 const FALLBACK_IMAGES = {
   default: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe',
   cat: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba',
   dog: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1',
   nature: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e'
+};
+
+const slideAnimations = {
+  slideIn: `
+    @keyframes slideIn {
+      0% { transform: translateX(20%); opacity: 0; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+  `,
+  slideOut: `
+    @keyframes slideOut {
+      0% { transform: translateX(0); opacity: 1; }
+      100% { transform: translateX(-20%); opacity: 0; }
+    }
+  `,
+  slideInRight: `
+    @keyframes slideInRight {
+      0% { transform: translateX(-20%); opacity: 0; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+  `,
+  slideOutRight: `
+    @keyframes slideOutRight {
+      0% { transform: translateX(0); opacity: 1; }
+      100% { transform: translateX(20%); opacity: 0; }
+    }
+  `
 };
 
 const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
@@ -59,7 +85,6 @@ const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
   
   const currentIndex = currentImage ? images.findIndex(img => img.id === currentImage.id) : -1;
   
-  // Reset states when a new image is opened
   useEffect(() => {
     if (image) {
       setCurrentImage(image);
@@ -69,7 +94,6 @@ const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
     }
   }, [image]);
 
-  // Generate fallback image URL based on image title or tags
   const fallbackImageUrl = useMemo(() => {
     if (!imageError || !currentImage) return '';
     
@@ -87,6 +111,8 @@ const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
     return FALLBACK_IMAGES.default;
   }, [imageError, currentImage]);
   
+  const NAVIGATION_DELAY = 300; 
+  
   const handlePrevious = () => {
     if (currentIndex > 0 && !sliding) {
       setSlideDirection('right');
@@ -94,14 +120,18 @@ const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
       setLoaded(false);
       setImageError(false);
       
-      // Preload the previous image to make transitions smoother
-      const preloadImage = new Image();
-      preloadImage.src = images[currentIndex - 1].url;
+      const previousIndex = currentIndex - 1;
+      const previousImage = images[previousIndex];
       
-      setTimeout(() => {
-        setCurrentImage(images[currentIndex - 1]);
-        setSliding(false);
-      }, 300);
+      if (previousImage) {
+        const preloadImg = new Image();
+        preloadImg.src = previousImage.url;
+        
+        setTimeout(() => {
+          setCurrentImage(previousImage);
+          setTimeout(() => setSliding(false), 50);
+        }, NAVIGATION_DELAY);
+      }
     }
   };
   
@@ -112,14 +142,18 @@ const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
       setLoaded(false);
       setImageError(false);
       
-      // Preload the next image to make transitions smoother
-      const preloadImage = new Image();
-      preloadImage.src = images[currentIndex + 1].url;
+      const nextIndex = currentIndex + 1;
+      const nextImage = images[nextIndex];
       
-      setTimeout(() => {
-        setCurrentImage(images[currentIndex + 1]);
-        setSliding(false);
-      }, 300);
+      if (nextImage) {
+        const preloadImg = new Image();
+        preloadImg.src = nextImage.url;
+        
+        setTimeout(() => {
+          setCurrentImage(nextImage);
+          setTimeout(() => setSliding(false), 50);
+        }, NAVIGATION_DELAY);
+      }
     }
   };
   
@@ -180,7 +214,7 @@ const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
           boxShadow: '0 24px 70px rgba(0, 0, 0, 0.4)',
           backgroundImage: 'linear-gradient(to bottom, rgba(25, 25, 25, 0.6), rgba(12, 12, 12, 0.6))',
           backdropFilter: 'blur(10px)',
-        },
+        }
       }}
     >
       <Box sx={{ position: 'relative' }}>
@@ -307,43 +341,48 @@ const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
               />
             )}
             
-            <Fade in={!sliding} timeout={300}>
-              <Box
-                component="img"
-                src={imageError ? fallbackImageUrl : (currentImage?.url || '')}
-                alt={currentImage?.title || 'Image'}
-                onLoad={() => setLoaded(true)}
-                onError={(e) => {
-                  console.error('Image failed to load:', currentImage?.url);
-                  setImageError(true);
-                  // Try to load fallback immediately
-                  if (fallbackImageUrl) {
-                    (e.target as HTMLImageElement).src = fallbackImageUrl;
-                  } else {
-                    setLoaded(true); // Show error state
-                  }
-                }}
-                sx={{
-                  maxWidth: '95%',
-                  maxHeight: '95%',
-                  objectFit: 'contain',
-                  opacity: loaded && !sliding ? 1 : 0,
-                  transition: 'opacity 0.3s ease',
-                  boxShadow: '0 5px 20px rgba(0,0,0,0.1)',
-                  animation: sliding 
-                    ? `slide${slideDirection === 'left' ? 'Out' : 'In'} 0.3s ease` 
-                    : 'none',
-                  '@keyframes slideOut': {
-                    '0%': { transform: 'translateX(0)', opacity: 1 },
-                    '100%': { transform: 'translateX(-20%)', opacity: 0 }
-                  },
-                  '@keyframes slideIn': {
-                    '0%': { transform: 'translateX(20%)', opacity: 0 },
-                    '100%': { transform: 'translateX(0)', opacity: 1 }
-                  }
-                }}
-              />
-            </Fade>
+            <Box
+              sx={{
+                position: 'relative',
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                overflow: 'hidden',
+              }}
+            >
+              <Fade in={!sliding || sliding} timeout={{ enter: 400, exit: 300 }}>
+                <Box
+                  component="img"
+                  src={imageError ? fallbackImageUrl : (currentImage?.url || '')}
+                  alt={currentImage?.title || 'Image'}
+                  onLoad={() => setLoaded(true)}
+                  onError={(e) => {
+                    console.error('Image failed to load:', currentImage?.url);
+                    setImageError(true);
+                    if (fallbackImageUrl) {
+                      (e.target as HTMLImageElement).src = fallbackImageUrl;
+                    } else {
+                      setLoaded(true);
+                    }
+                  }}
+                  sx={{
+                    maxWidth: '90%',
+                    maxHeight: '90%',
+                    objectFit: 'contain',
+                    transition: slideDirection === 'left' 
+                      ? 'transform 350ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+                      : 'transform 350ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    opacity: sliding ? 0 : (loaded ? 1 : 0),
+                    transform: sliding 
+                      ? (slideDirection === 'left' ? 'translateX(-30%)' : 'translateX(30%)')
+                      : 'translateX(0)',
+                    position: 'absolute',
+                  }}
+                />
+              </Fade>
+            </Box>
             
             {imageError && !fallbackImageUrl && (
               <Box 
@@ -358,7 +397,8 @@ const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
                   borderRadius: 2,
                   bgcolor: 'rgba(0,0,0,0.6)',
                   backdropFilter: 'blur(5px)',
-                  color: 'white'
+                  color: 'white',
+                  zIndex: 3
                 }}
               >
                 <ErrorOutlineIcon sx={{ fontSize: 48, color: '#ff5252' }} />
