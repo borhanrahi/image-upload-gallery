@@ -14,9 +14,9 @@ import toast from 'react-hot-toast';
 // Factory function to create demo images with consistent properties
 const createDemoImage = (id: string, filename: string, title: string): ImageType => ({
   id,
-  url: `https://res.cloudinary.com/demo/image/upload/v1696496183/${filename}`,
+  url: filename,
   title,
-  publicId: filename,
+  publicId: filename.split('/').pop() || '',
   width: 800,
   height: 600,
   createdAt: '2023-01-01T00:00:00Z',
@@ -25,18 +25,18 @@ const createDemoImage = (id: string, filename: string, title: string): ImageType
 
 // Demo images created using the factory function
 const demoImages: ImageType[] = [
-  createDemoImage('1', 'sample', 'Sample Image 1'),
-  createDemoImage('2', 'cld-sample-2', 'Sample Image 2'),
-  createDemoImage('3', 'cld-sample-3', 'Sample Image 3'),
-  createDemoImage('4', 'cld-sample-4', 'Sample Image 4'),
-  createDemoImage('5', 'cld-sample-5', 'Sample Image 5'),
-  createDemoImage('6', 'flowers', 'Flowers'),
-  createDemoImage('7', 'shoes', 'Shoes'),
-  createDemoImage('8', 'animals/cat', 'Cat'),
-  createDemoImage('9', 'animals/dog', 'Dog'),
-  createDemoImage('10', 'forest', 'Forest'),
-  createDemoImage('11', 'beach', 'Beach'),
-  createDemoImage('12', 'city', 'City'),
+  createDemoImage('1', 'https://res.cloudinary.com/demo/image/upload/sample', 'Sample Image 1'),
+  createDemoImage('2', 'https://res.cloudinary.com/demo/image/upload/coffee_cup', 'Coffee Cup'),
+  createDemoImage('3', 'https://res.cloudinary.com/demo/image/upload/lady', 'Portrait'),
+  createDemoImage('4', 'https://res.cloudinary.com/demo/image/upload/couple', 'Happy Couple'),
+  createDemoImage('5', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe', 'Abstract Pattern'),
+  createDemoImage('6', 'https://res.cloudinary.com/demo/image/upload/yellow_tulip', 'Yellow Tulip'),
+  createDemoImage('7', 'https://res.cloudinary.com/demo/image/upload/shoes', 'Shoes'),
+  createDemoImage('8', 'https://res.cloudinary.com/demo/image/upload/kitten', 'Cat'),
+  createDemoImage('9', 'https://res.cloudinary.com/demo/image/upload/dog', 'Dog'),
+  createDemoImage('10', 'https://images.unsplash.com/photo-1448375240586-882707db888b', 'Forest'),
+  createDemoImage('11', 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e', 'Beach'),
+  createDemoImage('12', 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df', 'City'),
 ];
 
 const STORAGE_KEY = 'gallery_images';

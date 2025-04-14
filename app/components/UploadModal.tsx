@@ -207,12 +207,18 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
               </Button>
             </Box>
             
-            <Grid container spacing={2}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', margin: -1 }}>
               {selectedFiles.map((file, index) => {
                 const imageUrl = URL.createObjectURL(file);
                 
                 return (
-                  <Grid item xs={6} sm={4} md={3} key={index}>
+                  <Box 
+                    key={index} 
+                    sx={{ 
+                      width: { xs: '50%', sm: '33.33%', md: '25%' },
+                      padding: 1
+                    }}
+                  >
                     <Card 
                       elevation={0} 
                       sx={{ 
@@ -271,10 +277,10 @@ const UploadModal = ({ open, onClose, onImagesUploaded }: UploadModalProps) => {
                         </Tooltip>
                       </Box>
                     </Card>
-                  </Grid>
+                  </Box>
                 );
               })}
-            </Grid>
+            </Box>
           </Box>
         )}
         

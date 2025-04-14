@@ -138,7 +138,6 @@ export default function ImageGallery({
   
   const handlePageChange = (_event: React.ChangeEvent<unknown>, page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Smooth scroll to top
   };
 
   const getGridColumns = () => {

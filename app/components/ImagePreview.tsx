@@ -11,12 +11,14 @@ import {
   Slide,
   Backdrop,
   Fade,
-  Zoom
+  Zoom,
+  Alert
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { useState, useEffect, useMemo } from 'react';
 import { ImageType } from '../types';
 import { TransitionProps } from '@mui/material/transitions';
@@ -38,26 +40,63 @@ interface ImagePreviewProps {
   images: ImageType[];
 }
 
+// Fallback images when original images fail to load
+const FALLBACK_IMAGES = {
+  default: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe',
+  cat: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba',
+  dog: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1',
+  nature: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e'
+};
+
 const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
   const [loaded, setLoaded] = useState(false);
   const [currentImage, setCurrentImage] = useState<ImageType | null>(null);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('left');
   const [sliding, setSliding] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const theme = useTheme();
   
   const currentIndex = currentImage ? images.findIndex(img => img.id === currentImage.id) : -1;
   
+  // Reset states when a new image is opened
   useEffect(() => {
-    setCurrentImage(image);
-    setLoaded(false);
+    if (image) {
+      setCurrentImage(image);
+      setLoaded(false);
+      setImageError(false);
+      setSliding(false);
+    }
   }, [image]);
+
+  // Generate fallback image URL based on image title or tags
+  const fallbackImageUrl = useMemo(() => {
+    if (!imageError || !currentImage) return '';
+    
+    const title = currentImage.title?.toLowerCase() || '';
+    const tags = currentImage.tags || [];
+    
+    for (const category of Object.keys(FALLBACK_IMAGES)) {
+      if (category === 'default') continue;
+      
+      if (title.includes(category) || tags.some(tag => tag.toLowerCase().includes(category))) {
+        return FALLBACK_IMAGES[category as keyof typeof FALLBACK_IMAGES];
+      }
+    }
+    
+    return FALLBACK_IMAGES.default;
+  }, [imageError, currentImage]);
   
   const handlePrevious = () => {
     if (currentIndex > 0 && !sliding) {
       setSlideDirection('right');
       setSliding(true);
       setLoaded(false);
+      setImageError(false);
+      
+      // Preload the previous image to make transitions smoother
+      const preloadImage = new Image();
+      preloadImage.src = images[currentIndex - 1].url;
       
       setTimeout(() => {
         setCurrentImage(images[currentIndex - 1]);
@@ -71,6 +110,11 @@ const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
       setSlideDirection('left');
       setSliding(true);
       setLoaded(false);
+      setImageError(false);
+      
+      // Preload the next image to make transitions smoother
+      const preloadImage = new Image();
+      preloadImage.src = images[currentIndex + 1].url;
       
       setTimeout(() => {
         setCurrentImage(images[currentIndex + 1]);
@@ -253,7 +297,7 @@ const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
               overflow: 'hidden',
             }}
           >
-            {!loaded && (
+            {!loaded && !imageError && (
               <Skeleton
                 variant="rectangular"
                 width="100%"
@@ -266,9 +310,19 @@ const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
             <Fade in={!sliding} timeout={300}>
               <Box
                 component="img"
-                src={currentImage?.url || ''}
+                src={imageError ? fallbackImageUrl : (currentImage?.url || '')}
                 alt={currentImage?.title || 'Image'}
                 onLoad={() => setLoaded(true)}
+                onError={(e) => {
+                  console.error('Image failed to load:', currentImage?.url);
+                  setImageError(true);
+                  // Try to load fallback immediately
+                  if (fallbackImageUrl) {
+                    (e.target as HTMLImageElement).src = fallbackImageUrl;
+                  } else {
+                    setLoaded(true); // Show error state
+                  }
+                }}
                 sx={{
                   maxWidth: '95%',
                   maxHeight: '95%',
@@ -290,6 +344,32 @@ const ImagePreview = ({ open, onClose, image, images }: ImagePreviewProps) => {
                 }}
               />
             </Fade>
+            
+            {imageError && !fallbackImageUrl && (
+              <Box 
+                sx={{ 
+                  position: 'absolute',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 2,
+                  p: 3,
+                  borderRadius: 2,
+                  bgcolor: 'rgba(0,0,0,0.6)',
+                  backdropFilter: 'blur(5px)',
+                  color: 'white'
+                }}
+              >
+                <ErrorOutlineIcon sx={{ fontSize: 48, color: '#ff5252' }} />
+                <Typography variant="h6">
+                  Image could not be loaded
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.7, maxWidth: 400, textAlign: 'center' }}>
+                  The image appears to be unavailable or the URL may be incorrect
+                </Typography>
+              </Box>
+            )}
           </Box>
           
           <Fade in={true}>
