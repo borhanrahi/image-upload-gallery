@@ -67,22 +67,18 @@ export const useImageGallery = ({ initialImages = [] }: UseImageGalleryProps): U
         return false;
       }
       
-      // Remove the image from state immediately for better UX
       setImages(prev => prev.filter(img => img.id !== id));
       toast.success('Image deleted successfully');
       
-      // Then handle the cloud deletion in the background
       if (imageToDelete.publicId) {
         try {
           const success = await deleteFromCloudinary(imageToDelete.publicId);
           
           if (!success) {
             console.error('Failed to delete image from cloud storage, but removed from gallery');
-            // Don't show error toast since the image is already removed from gallery
           }
         } catch (error) {
           console.error('Error deleting from Cloudinary:', error);
-          // Don't show error toast since the image is already removed from gallery
         }
       }
       
